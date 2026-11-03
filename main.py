@@ -357,4 +357,5 @@ if __name__ == "__main__":
     global_auth_window.show()
     
     sys.exit(app.exec())\
+    
 
