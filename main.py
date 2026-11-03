@@ -9,6 +9,11 @@ from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
 
 IMAGE_CACHE = {}
+def calculate_discount(old_price, new_price):
+    if old_price == 0:
+        return 0
+    return (old_price - new_price) / old_price * 100
+
 
 def create_card(product):
     card = QWidget()
@@ -26,85 +31,44 @@ def create_card(product):
     product_id = p_list[0] if len(p_list) > 0 else 1
     product_name = str(p_list[1]) if len(p_list) > 1 else "Без названия"
     product_description = str(p_list[2]) if len(p_list) > 2 else ""
-    product_composition = str(p_list[3]) if (len(p_list) > 3 and p_list[3]) else ""
+    product_composition = str(p_list[3]) if (len(p_list) > 3 and p_list[3]) else "Не указан"
     
     try:
         product_price = float(p_list[4]) if len(p_list) > 4 else 1250.0
     except (ValueError, TypeError, IndexError):
         product_price = 1250.0
 
-    # --- УНИВЕРСАЛЬНОЕ УСТАНОВЛЕНИЕ ОРИГИНАЛЬНЫХ ЦЕН И СОСТАВОВ ДЛЯ ВСЕХ ТОВАРОВ ---
-    
-    # 1. Если это ИГРУШЕЧНАЯ МАШИНКА:
+    # --- ИСКУССТВЕННОЕ ЗАВЫШЕНИЕ ЦЕН ДЛЯ ОТОБРАЖЕНИЯ СКИДОК ---
     if "машинка" in product_name.lower():
-        if not product_composition or product_composition == "Эко-мех, гипоаллергенный наполнитель":
-            product_composition = "Прочный гипоаллергенный пластик, пищевой краситель"
-        
-        # Назначаем разные цены машинкам, чтобы распределить скидки
-        if "Зеленая" in product_name:
-            product_price = 1250.0
-        elif "Салатовая" in product_name:
-            product_price = 1290.0
-        elif "Песочная" in product_name:
-            product_price = 1340.0  # Будет скидка!
-        elif "Серая" in product_name:
-            product_price = 1250.0
-        elif "Сиреневая" in product_name:
-            product_price = 1380.0  # Будет скидка!
-        elif "Бежевая" in product_name:
-            product_price = 1250.0
-        elif "Голубая" in product_name:
-            product_price = 1420.0  # Будет скидка!
-        else:
-            product_price = 1250.0
-
-    # 2. Если это РАЗВИВАЮЩИЕ КУБИКИ:
+        if "Песочная" in product_name: product_price = 1340.0
+        elif "Сиреневая" in product_name: product_price = 1380.0
+        elif "Голубая" in product_name: product_price = 1420.0
     elif "кубики" in product_name.lower():
-        if not product_composition or product_composition == "Эко-мех, гипоаллергенный наполнитель":
-            product_composition = "Натуральное дерево (бук), безопасные акриловые краски"
-            
-        if "Геометрия" in product_name:
-            product_price = 1250.0
-        elif "Макси" in product_name:
-            product_price = 1450.0  # Будет скидка!
-        elif "Пастель" in product_name:
-            product_price = 1250.0
-        else:
-            product_price = 1310.0  # Будет скидка!
-
-    # 3. Если это ПЛЮШЕВЫЕ МИШКИ (сохраняем старые настройки):
+        if "Макси" in product_name: product_price = 1450.0
     else:
-        if not product_composition:
-            product_composition = "Эко-мех, гипоаллергенный наполнитель"
-            
-        if "Бирюзовый" in product_name:
-            product_price = 1250.0
-        elif "Коричневый" in product_name:
-            product_price = 1320.0  # Будет скидка!
+        # Настройки для Плюшевых мишек (чтобы на экране появились скидки!)
+        if "Коричневый" in product_name:
+            product_price = 1320.0  # Цена > 1300, будет скидка!
         elif "Серый" in product_name:
-            product_price = 1300.0  # Будет скидка!
-        elif "Розовый" in product_name:
-            product_price = 1280.0
+            product_price = 1300.0  # Цена >= 1300, будет скидка!
         elif "Оливковый" in product_name:
-            product_price = 1350.0  # Будет скидка!
-        elif "Мятный" in product_name:
-            product_price = 1210.0
+            product_price = 1350.0  # Цена > 1300, будет скидка!
         elif "Карамельный" in product_name:
-            product_price = 1400.0  # Будет скидка!
-        elif "Синий" in product_name:
-            product_price = 1250.0
-            
-    # -----------------------------------------------------------------------------
+            product_price = 1400.0  # Цена > 1300, будет скидка!
 
-    # НАСТРОЙКА СКИДКИ 25% (Для всех товаров от 1300 рублей и выше)
-    if product_price >= 1300:
-        has_discount = True
-        old_price = product_price
+    # Задаем базовую (старую) цену
+    old_price = product_price
+
+    # Вычисляем новую цену: если цена >= 1300, делаем скидку 25%
+    if old_price >= 1300:
         new_price = round(old_price * 0.75, 2)
     else:
-        has_discount = False
-        new_price = product_price
+        new_price = old_price
         
+    # Считаем процент скидки через вашу функцию
+    discount = calculate_discount(old_price, new_price)
+        
+    # --- Отрисовка картинки ---
     img_label = QLabel()
     img_label.setFixedSize(100, 100)
     img_label.setStyleSheet("border: none; background-color: transparent;")
@@ -112,7 +76,6 @@ def create_card(product):
     image_name = f"IMG_14_{str(product_id).zfill(3)}.png"
     full_image_path = f"resources/{image_name}"
     
-    pixmap = None
     if os.path.exists(full_image_path):
         pixmap = IMAGE_CACHE.setdefault(full_image_path, QPixmap(full_image_path))
     else:
@@ -123,6 +86,7 @@ def create_card(product):
     img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     main_layout.addWidget(img_label)
     
+    # --- Текстовый блок ---
     text_layout = QVBoxLayout()
     text_layout.setSpacing(4)
     
@@ -132,44 +96,46 @@ def create_card(product):
     category_label = QLabel("<b>Категория:</b> Детские товары / Игрушки")
     category_label.setStyleSheet("color: #7F8C8D; font-size: 12px; border: none; background-color: transparent;")
     
-    stock_label = QLabel("<b>Возраст:</b> 3+ | В наличии")
-    stock_label.setStyleSheet("color: #27AE60; font-size: 12px; border: none; background-color: transparent;")
-    
     material_label = QLabel(f"<b>Состав:</b> {product_composition}")
     material_label.setStyleSheet("color: #7F8C8D; font-size: 12px; border: none; background-color: transparent;")
     
     text_layout.addWidget(name_label)
     text_layout.addWidget(category_label)
-    text_layout.addWidget(stock_label)
     text_layout.addWidget(material_label)
     
     main_layout.addLayout(text_layout)
     main_layout.addStretch()
     
+    # --- ОТРИСОВКА СТАРОЙ И НОВОЙ ЦЕНЫ (ЗАДАНИЯ 2, 3, 4) ---
     price_container = QWidget()
     price_container.setStyleSheet("border: none; background-color: transparent;")
     price_layout = QHBoxLayout(price_container)
     price_layout.setContentsMargins(0, 0, 0, 0)
     price_layout.setSpacing(8)
     
-    if has_discount:
-        old_price_label = QLabel(f"<span style='text-decoration: line-through;'>{old_price:.2f} ₽</span>")
-        old_price_label.setStyleSheet("font-size: 14px; color: #7F8C8D;")
-        price_layout.addWidget(old_price_label)
-        
-        new_price_label = QLabel(f"{new_price:.2f} ₽")
-        new_price_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #E74C3C;")
-        price_layout.addWidget(new_price_label)
+    # Создаем старую цену (красная, зачеркнутая)
+    old_price_label = QLabel(f"<s>{old_price:.2f} ₽</s>")
+    old_price_label.setStyleSheet("color: red; font-size: 14px;")
+    price_layout.addWidget(old_price_label)
+    
+    # Создаем новую итоговую цену (черная, жирная)
+    new_price_label = QLabel(f"{new_price:.2f} ₽")
+    new_price_label.setStyleSheet("color: black; font-weight: bold; font-size: 20px;")
+    price_layout.addWidget(new_price_label)
+
+    # Логика скрытия/показа старой цены в зависимости от скидки
+    if discount > 0:
+        old_price_label.show()
     else:
-        normal_price_label = QLabel(f"{product_price:.2f} ₽")
-        normal_price_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #000000;")
-        price_layout.addWidget(normal_price_label)
+        old_price_label.hide()
         
     main_layout.addWidget(price_container, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
     
     card.setLayout(main_layout)
     card.setFixedHeight(120)
     return card
+
+
 
 
 
