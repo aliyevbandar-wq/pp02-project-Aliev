@@ -17,16 +17,12 @@ def calculate_discount(old_price, new_price):
 
 def create_card(product):
     card = QWidget()
-    card.setStyleSheet("""
-        QWidget { background-color: #F9F9F9; border: 1px solid #E0E0E0; border-radius: 8px; }
-        QWidget:hover { background-color: #F5F7FA; border: 1px solid #BDC3C7; }
-    """)
     
     main_layout = QHBoxLayout()
     main_layout.setContentsMargins(15, 10, 15, 10)
     
-    # Безопасное превращение в список
-    p_list = list(product) if isinstance(product, (tuple, list)) else [1, str(product), "", "", 1250.0]
+    # Безопасное превращение в список (8 элементов для поддержки total_quantity на 7-м индексе)
+    p_list = list(product) if isinstance(product, (tuple, list)) else [1, str(product), "", "", 1250.0, 0, 0, 0]
     
     product_id = p_list[0] if len(p_list) > 0 else 1
     product_name = str(p_list[1]) if len(p_list) > 1 else "Без названия"
@@ -38,6 +34,12 @@ def create_card(product):
     except (ValueError, TypeError, IndexError):
         product_price = 1250.0
 
+    # Чтение адаптированного поля количества (из таблицы stock_items, поле количество_на_складе)
+    try:
+        total_quantity = int(p_list[7]) if len(p_list) > 7 else 0
+    except (ValueError, TypeError, IndexError):
+        total_quantity = 0
+
     # --- ИСКУССТВЕННОЕ ЗАВЫШЕНИЕ ЦЕН ДЛЯ ОТОБРАЖЕНИЯ СКИДОК ---
     if "машинка" in product_name.lower():
         if "Песочная" in product_name: product_price = 1340.0
@@ -46,27 +48,42 @@ def create_card(product):
     elif "кубики" in product_name.lower():
         if "Макси" in product_name: product_price = 1450.0
     else:
-        # Настройки для Плюшевых мишек (чтобы на экране появились скидки!)
-        if "Коричневый" in product_name:
-            product_price = 1320.0  # Цена > 1300, будет скидка!
-        elif "Серый" in product_name:
-            product_price = 1300.0  # Цена >= 1300, будет скидка!
-        elif "Оливковый" in product_name:
-            product_price = 1350.0  # Цена > 1300, будет скидка!
-        elif "Карамельный" in product_name:
-            product_price = 1400.0  # Цена > 1300, будет скидка!
+        if "Коричневый" in product_name: product_price = 1320.0  
+        elif "Серый" in product_name: product_price = 1300.0  
+        elif "Оливковый" in product_name: product_price = 1350.0  
+        elif "Карамельный" in product_name: product_price = 1400.0  
 
-    # Задаем базовую (старую) цену
     old_price = product_price
 
-    # Вычисляем новую цену: если цена >= 1300, делаем скидку 25%
     if old_price >= 1300:
         new_price = round(old_price * 0.75, 2)
     else:
         new_price = old_price
         
-    # Считаем процент скидки через вашу функцию
     discount = calculate_discount(old_price, new_price)
+
+    # --- ШАГ 3: ОБЪЕДИНЕННАЯ ПОДСВЕТКА ДЛЯ СВОЕЙ ТЕМЫ ---
+    if total_quantity == 0:
+        # Если количество на складе равно 0 -> голубой фон карточки
+        card.setStyleSheet("""
+            QWidget { background-color: #ADD8E6; border: 1px solid #B0C4DE; border-radius: 8px; }
+            QWidget:hover { background-color: #B0E0E6; }
+        """)
+        price_style = "color: black; font-weight: bold; font-size: 20px;"
+    elif discount > 15:
+        # Если товар есть в наличии и скидка > 15% -> зеленый текст цены (#2E8B57)
+        card.setStyleSheet("""
+            QWidget { background-color: #F9F9F9; border: 1px solid #E0E0E0; border-radius: 8px; }
+            QWidget:hover { background-color: #F5F7FA; border: 1px solid #BDC3C7; }
+        """)
+        price_style = "color: #2E8B57; font-weight: bold; font-size: 20px;"
+    else:
+        # Обычный товар в наличии без больших скидок -> белый фон, черная цена
+        card.setStyleSheet("""
+            QWidget { background-color: #F9F9F9; border: 1px solid #E0E0E0; border-radius: 8px; }
+            QWidget:hover { background-color: #F5F7FA; border: 1px solid #BDC3C7; }
+        """)
+        price_style = "color: black; font-weight: bold; font-size: 20px;"
         
     # --- Отрисовка картинки ---
     img_label = QLabel()
@@ -106,24 +123,21 @@ def create_card(product):
     main_layout.addLayout(text_layout)
     main_layout.addStretch()
     
-    # --- ОТРИСОВКА СТАРОЙ И НОВОЙ ЦЕНЫ (ЗАДАНИЯ 2, 3, 4) ---
+    # --- ОТРИСОВКА СТАРОЙ И НОВОЙ ЦЕНЫ ---
     price_container = QWidget()
     price_container.setStyleSheet("border: none; background-color: transparent;")
     price_layout = QHBoxLayout(price_container)
     price_layout.setContentsMargins(0, 0, 0, 0)
     price_layout.setSpacing(8)
     
-    # Создаем старую цену (красная, зачеркнутая)
     old_price_label = QLabel(f"<s>{old_price:.2f} ₽</s>")
     old_price_label.setStyleSheet("color: red; font-size: 14px;")
     price_layout.addWidget(old_price_label)
     
-    # Создаем новую итоговую цену (черная, жирная)
     new_price_label = QLabel(f"{new_price:.2f} ₽")
-    new_price_label.setStyleSheet("color: black; font-weight: bold; font-size: 20px;")
+    new_price_label.setStyleSheet(price_style)
     price_layout.addWidget(new_price_label)
 
-    # Логика скрытия/показа старой цены в зависимости от скидки
     if discount > 0:
         old_price_label.show()
     else:
@@ -134,10 +148,6 @@ def create_card(product):
     card.setLayout(main_layout)
     card.setFixedHeight(120)
     return card
-
-
-
-
 
 class MainWindow(QMainWindow):
     # Шаг 2: Добавляем параметр full_name=None в конструктор главного окна
