@@ -4,7 +4,7 @@ import os
 os.environ["PGCLIENTENCODING"] = "utf-8"
 
 from database import Database
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
 
@@ -150,27 +150,13 @@ def create_card(product):
     return card
 
 class MainWindow(QMainWindow):
-    # Шаг 2: Добавляем параметр full_name=None в конструктор главного окна
     def __init__(self, role_id=None, full_name=None):
         super().__init__()
-        
-        # Задание 2.1: Шрифт Calibri
-        self.setStyleSheet("""
-            QMainWindow {
-                font-family: Calibri;
-            }
-        """)
-        
         self.role_id = role_id  
-        
-        # Шаг 3: Сохраняем переданное ФИО в переменную объекта
         self.full_name = full_name if full_name else "Гость"
-        self.user_fio = self.full_name  # Для совместимости с QLabel отображения
-        
+        self.user_fio = self.full_name  
         self.setup_ui()
         self.setup_role_interface()
-
-
 
     def setup_ui(self):
         self.setWindowTitle("Мир игрушек — Каталог")
@@ -186,13 +172,10 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setContentsMargins(20, 15, 20, 15)
         
-        header_widget = QWidget()
-        header_widget.setStyleSheet("background-color: #D2F6E7; border-radius: 8px;")
-        
-        top_layout = QHBoxLayout(header_widget)
+        top_layout = QHBoxLayout()
         top_layout.setSpacing(12) 
-        top_layout.setContentsMargins(15, 10, 15, 10)
-        
+        top_layout.setContentsMargins(0, 0, 0, 0)
+
         logo = QLabel()
         logo.setFixedSize(100, 100)  
         logo_pixmap = QPixmap("resources/logo.png")
@@ -202,45 +185,45 @@ class MainWindow(QMainWindow):
         top_layout.addWidget(logo)
         
         title_label = QLabel("Мир игрушек — Каталог")
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #2C3E50; border: none; background-color: transparent;")
+        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #2C3E50; border: none;")
         top_layout.addWidget(title_label)
         
         self.role_label = QLabel()
-        self.role_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #7F8C8D; border: none; padding-left: 10px; background-color: transparent;")
+        self.role_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #7F8C8D; border: none; padding-left: 10px;")
         top_layout.addWidget(self.role_label)
         
         top_layout.addStretch()
         self.user_label = QLabel(f" {self.user_fio}")
-        self.user_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2C3E50; border: none; padding-right: 15px; background-color: transparent;")
+        self.user_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2C3E50; border: none; padding-right: 15px;")
         top_layout.addWidget(self.user_label)
 
         self.btn_add_product = QPushButton("Добавить товар")
         self.btn_add_product.setFixedSize(120, 35)
         self.btn_add_product.setStyleSheet("""
-            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
-            QPushButton:hover { background-color: #5B9E9B; }
+            QPushButton { background-color: #34495E; color: white; border-radius: 6px; font-weight: bold; border: none; }
+            QPushButton:hover { background-color: #2C3E50; }
         """)
         top_layout.addWidget(self.btn_add_product)
         
         self.order_button = QPushButton("Оформить заказ")
         self.order_button.setFixedSize(130, 35)
         self.order_button.setStyleSheet("""
-            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
-            QPushButton:hover { background-color: #5B9E9B; }
+            QPushButton { background-color: #27AE60; color: white; border-radius: 6px; font-weight: bold; border: none; }
+            QPushButton:hover { background-color: #219653; }
         """)
         
         self.manager_button = QPushButton("Заказы (менеджер)")
         self.manager_button.setFixedSize(150, 35)
         self.manager_button.setStyleSheet("""
-            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
-            QPushButton:hover { background-color: #5B9E9B; }
+            QPushButton { background-color: #2980B9; color: white; border-radius: 6px; font-weight: bold; border: none; }
+            QPushButton:hover { background-color: #1F6391; }
         """)
         
         self.admin_button = QPushButton("Админ-панель")
         self.admin_button.setFixedSize(120, 35)
         self.admin_button.setStyleSheet("""
-            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
-            QPushButton:hover { background-color: #5B9E9B; }
+            QPushButton { background-color: #8E44AD; color: white; border-radius: 6px; font-weight: bold; border: none; }
+            QPushButton:hover { background-color: #732D91; }
         """)
         
         top_layout.addWidget(self.order_button)
@@ -250,8 +233,8 @@ class MainWindow(QMainWindow):
         self.btn_exit = QPushButton("Выход")
         self.btn_exit.setFixedSize(80, 35)
         self.btn_exit.setStyleSheet("""
-            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
-            QPushButton:hover { background-color: #5B9E9B; }
+            QPushButton { background-color: #E74C3C; color: white; border-radius: 6px; font-weight: bold; border: none; }
+            QPushButton:hover { background-color: #C0392B; }
         """)
         self.btn_exit.clicked.connect(self.logout_user)
         top_layout.addWidget(self.btn_exit)
@@ -259,11 +242,30 @@ class MainWindow(QMainWindow):
         self.btn_exit.clicked.connect(self.close)
         top_layout.addWidget(self.btn_exit)
         
-        layout.addWidget(header_widget)
+        layout.addLayout(top_layout)
         layout.addSpacing(10)
         
         self.db = Database()
-        self.products = self.db.get_products()
+        
+        self.sort_combo = QComboBox()
+        self.sort_combo.addItems(["По возрастанию", "По убыванию"]) 
+        self.sort_combo.currentIndexChanged.connect(self.load_products)
+        layout.addWidget(self.sort_combo)
+        
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItem("Все категории")
+        try:
+            categories = self.db.get_categories()
+            self.filter_combo.addItems(categories)
+        except Exception:
+            pass
+        self.filter_combo.currentIndexChanged.connect(self.load_products)
+        layout.addWidget(self.filter_combo)
+        
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Поиск...")
+        self.search_input.textChanged.connect(self.load_products)
+        layout.addWidget(self.search_input)
         
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -276,14 +278,51 @@ class MainWindow(QMainWindow):
         self.cards_layout.setSpacing(12)
         self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
-        for product in self.products:
-            card_widget = create_card(product)
-            self.cards_layout.addWidget(card_widget)
-            
         self.scroll_area.setWidget(self.scroll_widget)
         layout.addWidget(self.scroll_area)
         self.setCentralWidget(central)
+        
+        self.load_products()
 
+    def load_products(self):
+        search_text = self.search_input.text().lower()
+        selected_category = self.filter_combo.currentText()
+        sort_direction = self.sort_combo.currentText()
+
+        try:
+            all_products = self.db.get_products()
+        except Exception:
+            all_products = []
+            
+        filtered_products = []
+
+        for p in all_products:
+            p_str = str(p).lower()
+            if search_text and (search_text not in p_str):
+                continue
+            if selected_category != "Все категории" and (selected_category.lower() not in p_str):
+                continue
+            filtered_products.append(p)
+
+        try:
+            if sort_direction == "По возрастанию":
+                filtered_products.sort(key=lambda x: float(x[3]) if len(x) > 3 else 0.0)
+            else:
+                filtered_products.sort(key=lambda x: float(x[3]) if len(x) > 3 else 0.0, reverse=True)
+        except Exception:
+            pass
+
+        while self.cards_layout.count():
+            item = self.cards_layout.takeAt(0)
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+        for product in filtered_products:
+            card_widget = create_card(product)
+            if card_widget:
+                self.cards_layout.addWidget(card_widget)
 
 
     def setup_role_interface(self):
@@ -329,6 +368,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self.db.close_all()
         event.accept()
+    
 
 if __name__ == "__main__":
     if sys.platform == 'win32':
@@ -346,5 +386,6 @@ if __name__ == "__main__":
     global_auth_window.show()
     
     sys.exit(app.exec())\
+    
     
 

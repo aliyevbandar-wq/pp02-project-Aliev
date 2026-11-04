@@ -53,6 +53,24 @@ class Database:
                 cursor.close()
             self.release_connection(conn)
 
+    def get_categories(self):
+        """Задание 1.1: Получает список уникальных категорий товаров."""
+        conn = self.get_connection()
+        if conn is None:
+            return []
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT category FROM public.products;")
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Ошибка при получении категорий: {e}")
+            return []
+        finally:
+            if "cursor" in locals():
+                cursor.close()
+            self.release_connection(conn)
+
     def check_user_login(self, login_text):
         """Проверяет существование логина в таблице public.users и возвращает данные пользователя"""
         conn = self.get_connection()
@@ -85,5 +103,6 @@ class Database:
 if __name__ == "__main__":
     db = Database()
     print("Список игрушек:", db.get_products())
+    print("Список категорий:", db.get_categories())
     print("Тест авторизации admin_toy:", db.check_user_login("admin_toy"))
     db.close_all()
