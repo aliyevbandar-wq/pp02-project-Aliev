@@ -153,6 +153,14 @@ class MainWindow(QMainWindow):
     # Шаг 2: Добавляем параметр full_name=None в конструктор главного окна
     def __init__(self, role_id=None, full_name=None):
         super().__init__()
+        
+        # Задание 2.1: Шрифт Calibri
+        self.setStyleSheet("""
+            QMainWindow {
+                font-family: Calibri;
+            }
+        """)
+        
         self.role_id = role_id  
         
         # Шаг 3: Сохраняем переданное ФИО в переменную объекта
@@ -161,6 +169,7 @@ class MainWindow(QMainWindow):
         
         self.setup_ui()
         self.setup_role_interface()
+
 
 
     def setup_ui(self):
@@ -177,9 +186,12 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setContentsMargins(20, 15, 20, 15)
         
-        top_layout = QHBoxLayout()
+        header_widget = QWidget()
+        header_widget.setStyleSheet("background-color: #D2F6E7; border-radius: 8px;")
+        
+        top_layout = QHBoxLayout(header_widget)
         top_layout.setSpacing(12) 
-        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setContentsMargins(15, 10, 15, 10)
         
         logo = QLabel()
         logo.setFixedSize(100, 100)  
@@ -190,46 +202,45 @@ class MainWindow(QMainWindow):
         top_layout.addWidget(logo)
         
         title_label = QLabel("Мир игрушек — Каталог")
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #2C3E50; border: none;")
+        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #2C3E50; border: none; background-color: transparent;")
         top_layout.addWidget(title_label)
         
         self.role_label = QLabel()
-        self.role_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #7F8C8D; border: none; padding-left: 10px;")
+        self.role_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #7F8C8D; border: none; padding-left: 10px; background-color: transparent;")
         top_layout.addWidget(self.role_label)
         
         top_layout.addStretch()
         self.user_label = QLabel(f" {self.user_fio}")
-        self.user_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2C3E50; border: none; padding-right: 15px;")
+        self.user_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2C3E50; border: none; padding-right: 15px; background-color: transparent;")
         top_layout.addWidget(self.user_label)
 
-        
         self.btn_add_product = QPushButton("Добавить товар")
         self.btn_add_product.setFixedSize(120, 35)
         self.btn_add_product.setStyleSheet("""
-            QPushButton { background-color: #34495E; color: white; border-radius: 6px; font-weight: bold; border: none; }
-            QPushButton:hover { background-color: #2C3E50; }
+            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
+            QPushButton:hover { background-color: #5B9E9B; }
         """)
         top_layout.addWidget(self.btn_add_product)
         
         self.order_button = QPushButton("Оформить заказ")
         self.order_button.setFixedSize(130, 35)
         self.order_button.setStyleSheet("""
-            QPushButton { background-color: #27AE60; color: white; border-radius: 6px; font-weight: bold; border: none; }
-            QPushButton:hover { background-color: #219653; }
+            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
+            QPushButton:hover { background-color: #5B9E9B; }
         """)
         
         self.manager_button = QPushButton("Заказы (менеджер)")
         self.manager_button.setFixedSize(150, 35)
         self.manager_button.setStyleSheet("""
-            QPushButton { background-color: #2980B9; color: white; border-radius: 6px; font-weight: bold; border: none; }
-            QPushButton:hover { background-color: #1F6391; }
+            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
+            QPushButton:hover { background-color: #5B9E9B; }
         """)
         
         self.admin_button = QPushButton("Админ-панель")
         self.admin_button.setFixedSize(120, 35)
         self.admin_button.setStyleSheet("""
-            QPushButton { background-color: #8E44AD; color: white; border-radius: 6px; font-weight: bold; border: none; }
-            QPushButton:hover { background-color: #732D91; }
+            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
+            QPushButton:hover { background-color: #5B9E9B; }
         """)
         
         top_layout.addWidget(self.order_button)
@@ -239,8 +250,8 @@ class MainWindow(QMainWindow):
         self.btn_exit = QPushButton("Выход")
         self.btn_exit.setFixedSize(80, 35)
         self.btn_exit.setStyleSheet("""
-            QPushButton { background-color: #E74C3C; color: white; border-radius: 6px; font-weight: bold; border: none; }
-            QPushButton:hover { background-color: #C0392B; }
+            QPushButton { background-color: #70B2AF; color: white; border-radius: 6px; font-weight: bold; border: none; font-family: Calibri; }
+            QPushButton:hover { background-color: #5B9E9B; }
         """)
         self.btn_exit.clicked.connect(self.logout_user)
         top_layout.addWidget(self.btn_exit)
@@ -248,7 +259,7 @@ class MainWindow(QMainWindow):
         self.btn_exit.clicked.connect(self.close)
         top_layout.addWidget(self.btn_exit)
         
-        layout.addLayout(top_layout)
+        layout.addWidget(header_widget)
         layout.addSpacing(10)
         
         self.db = Database()
@@ -272,6 +283,8 @@ class MainWindow(QMainWindow):
         self.scroll_area.setWidget(self.scroll_widget)
         layout.addWidget(self.scroll_area)
         self.setCentralWidget(central)
+
+
 
     def setup_role_interface(self):
         if self.role_id == 3:
