@@ -4,7 +4,7 @@ import os
 os.environ["PGCLIENTENCODING"] = "utf-8"
 
 from database import Database
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit, QStackedWidget
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
 
@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
         self.setup_role_interface()
 
     def setup_ui(self):
-        self.setWindowTitle("Мир игрушек — Каталог")
+        self.setWindowTitle("Мир игрушек")
         self.resize(1000, 650)  
         self.setWindowIcon(QIcon("resources/icon.ico"))
         
@@ -249,7 +249,7 @@ class MainWindow(QMainWindow):
         logo.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)       
         top_layout.addWidget(logo)
         
-        title_label = QLabel("Мир игрушек — Каталог")
+        title_label = QLabel("Мир игрушек")
         title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #2C3E50; border: none;")
         top_layout.addWidget(title_label)
         
@@ -258,7 +258,9 @@ class MainWindow(QMainWindow):
         top_layout.addWidget(self.role_label)
         
         top_layout.addStretch()
-        self.user_label = QLabel(f" {self.user_fio}")
+        
+        display_fio = self.full_name if hasattr(self, 'full_name') and self.full_name else "Гость"
+        self.user_label = QLabel(f" {display_fio}")
         self.user_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #2C3E50; border: none; padding-right: 15px;")
         top_layout.addWidget(self.user_label)
 
@@ -299,21 +301,37 @@ class MainWindow(QMainWindow):
         self.btn_exit = QPushButton("Выход")
         self.btn_exit.setFixedSize(80, 35)
         self.btn_exit.setStyleSheet(button_style)
-        self.btn_exit.clicked.connect(self.logout_user)
+        try: self.btn_exit.clicked.connect(self.logout_user)
+        except AttributeError: pass
         top_layout.addWidget(self.btn_exit)
 
         self.btn_exit.clicked.connect(self.close)
-        top_layout.addWidget(self.btn_exit)
+
+        self.back_button = QPushButton("Назад")
+        self.back_button.setFixedSize(80, 35)
+        self.back_button.setStyleSheet(button_style)
+        self.back_button.clicked.connect(self.go_back)
+        top_layout.addWidget(self.back_button)
         
         layout.addWidget(header_container)
         layout.addSpacing(10)
         
         self.db = Database()
+
+        self.stacked_widget = QStackedWidget()
+        
+        self.catalog_page = QWidget()
+        catalog_layout = QVBoxLayout(self.catalog_page)
+        catalog_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.catalog_title = QLabel(" СТРАНИЦА: КАТАЛОГ ТОВАРОВ")
+        self.catalog_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #2C3E50; padding: 5px;")
+        catalog_layout.addWidget(self.catalog_title)
         
         self.sort_combo = QComboBox()
         self.sort_combo.addItems(["По возрастанию", "По убыванию"]) 
         self.sort_combo.currentIndexChanged.connect(self.load_products)
-        layout.addWidget(self.sort_combo)
+        catalog_layout.addWidget(self.sort_combo)
         
         self.filter_combo = QComboBox()
         self.filter_combo.addItem("Все категории")
@@ -323,12 +341,12 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
         self.filter_combo.currentIndexChanged.connect(self.load_products)
-        layout.addWidget(self.filter_combo)
+        catalog_layout.addWidget(self.filter_combo)
         
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Поиск...")
         self.search_input.textChanged.connect(self.load_products)
-        layout.addWidget(self.search_input)
+        catalog_layout.addWidget(self.search_input)
         
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -342,12 +360,47 @@ class MainWindow(QMainWindow):
         self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         self.scroll_area.setWidget(self.scroll_widget)
-        layout.addWidget(self.scroll_area)
-        self.setCentralWidget(central)
+        catalog_layout.addWidget(self.scroll_area)
         
+        self.stacked_widget.addWidget(self.catalog_page)
+        
+        self.product_card_page = QWidget()
+        product_layout = QVBoxLayout(self.product_card_page)
+        product_layout.addWidget(QLabel(" СТРАНИЦА: КАРТОЧКА ТОВАРА (Подробно)"))
+        product_layout.addStretch()
+        
+        self.stacked_widget.addWidget(self.product_card_page)
+        
+        self.orders_page = QWidget()
+        orders_layout = QVBoxLayout(self.orders_page)
+        orders_layout.addWidget(QLabel(" СТРАНИЦА: ЗАКАЗЫ ПОЛЬЗОВАТЕЛЯ"))
+        orders_layout.addStretch()
+        
+        self.stacked_widget.addWidget(self.orders_page)
+        
+        self.switch_page(0)
+        layout.addWidget(self.stacked_widget)
+        
+        self.btn_add_product.clicked.connect(lambda: self.switch_page(1))
+        self.order_button.clicked.connect(lambda: self.switch_page(2))
+        
+        self.setCentralWidget(central)
         self.load_products()
 
+    def switch_page(self, index):
+        self.stacked_widget.setCurrentIndex(index)
+        if index == 0:
+            self.setWindowTitle("Мир игрушек — Каталог")
+        elif index == 1:
+            self.setWindowTitle("Мир игрушек — Карточка товара")
+        elif index == 2:
+            self.setWindowTitle("Мир игрушек — Заказы")
 
+    def go_back(self):
+        current_index = self.stacked_widget.currentIndex()
+        if current_index > 0:
+            self.switch_page(current_index - 1)
+    
 
     def load_products(self):
         search_text = self.search_input.text().lower()

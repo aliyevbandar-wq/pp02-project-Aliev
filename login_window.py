@@ -87,8 +87,8 @@ class LoginWindow(QWidget):
         if conn is not None:
             try:
                 cursor = conn.cursor()
-                # Адаптированный SQL-запрос под тему «Мир игрушек» и столбец 'fio'
-                query = "SELECT id_пользователя, id_роли, fio FROM users WHERE login = %s;"
+                # ШАГ 3: Изменили SQL-запрос, добавив раздельные поля last_name, first_name, middle_name вместо fio
+                query = "SELECT id_пользователя, id_роли, last_name, first_name, middle_name FROM users WHERE login = %s;"
                 cursor.execute(query, (login,))
                 result = cursor.fetchone()
                 cursor.close()
@@ -98,13 +98,15 @@ class LoginWindow(QWidget):
             finally:
                 self.db.release_connection(conn)
         
+        # Заглушки также адаптированы под новую структуру (id, role_id, last_name, first_name, middle_name)
         if result is None:
             if login in ["client", "client_bear"]:
-                result = (3, 1, "Сидоров Сидор Сидорович")
+                result = (3, 1, "Сидоров", "Сидор", "Сидорович")
             elif login in ["manager", "manager_doll"]:
-                result = (2, 2, "Петров Петр Петрович")
+                # Пример для проверки Шага 5 (middle_name = None)
+                result = (2, 2, "Петров", "Петр", None) 
             elif login in ["admin_toy", "12345", "admin"]:
-                result = (1, 3, "Иванов Иван Иванович")
+                result = (1, 3, "Иванов", "Иван", "Иванович")
                 
         if result is None:
             QMessageBox.warning(self, "Ошибка", "Пользователь не найден!")
@@ -112,8 +114,16 @@ class LoginWindow(QWidget):
             
         self.user_id = result[0]
         self.role_id = result[1]
-        self.full_name = result[2] # Прямое сохранение ФИО из одной колонки базы данных
         
+        # Распаковываем полученные части ФИО
+        last_name = result[2]
+        first_name = result[3]
+        middle_name = result[4]
+        
+        # ШАГ 4 и 5: Сохраняем ФИО, склеивая только существующие части (игнорируем None)
+        self.full_name = " ".join(part for part in (last_name, first_name, middle_name) if part)
+        
+        # ШАГ 6: Передаем full_name в MainWindow вместе с role_id
         if MainWindow is not None:
             self.main_window = MainWindow(role_id=self.role_id, full_name=self.full_name)
             self.main_window.show()
