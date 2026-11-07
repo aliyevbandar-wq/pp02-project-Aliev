@@ -4,7 +4,7 @@ import os
 os.environ["PGCLIENTENCODING"] = "utf-8"
 
 from database import Database
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit, QStackedWidget
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit, QStackedWidget, QMessageBox
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
 
@@ -301,11 +301,10 @@ class MainWindow(QMainWindow):
         self.btn_exit = QPushButton("Выход")
         self.btn_exit.setFixedSize(80, 35)
         self.btn_exit.setStyleSheet(button_style)
-        try: self.btn_exit.clicked.connect(self.logout_user)
-        except AttributeError: pass
         top_layout.addWidget(self.btn_exit)
-
+        
         self.btn_exit.clicked.connect(self.close)
+
 
         self.back_button = QPushButton("Назад")
         self.back_button.setFixedSize(80, 35)
@@ -483,8 +482,56 @@ class MainWindow(QMainWindow):
 
 
     def closeEvent(self, event):
-        self.db.close_all()
-        event.accept()
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Icon.Warning)
+        msg_box.setWindowTitle("Выход")
+        msg_box.setText("Вы уверены, что хотите выйти?")
+        
+        # Создаем кастомные кнопки на русском языке
+        yes_button = msg_box.addButton("Да", QMessageBox.ButtonRole.YesRole)
+        no_button = msg_box.addButton("Нет", QMessageBox.ButtonRole.NoRole)
+        msg_box.setDefaultButton(no_button)
+        
+        msg_box.setStyleSheet("""
+            QMessageBox {
+                background-color: #2C3E50;
+                font-family: 'Segoe UI', 'Calibri';
+            }
+            QLabel {
+                color: #FFFFFF;
+                font-size: 14px;
+            }
+            QPushButton {
+                background-color: #27AE60;
+                color: white;
+                border-radius: 6px;
+                padding: 6px 18px;
+                font-weight: bold;
+                font-size: 13px;
+                min-width: 60px;
+            }
+            QPushButton:hover {
+                background-color: #219653;
+            }
+            QPushButton:pressed {
+                background-color: #1E8449;
+            }
+        """)
+        
+        msg_box.exec()
+        
+        # Проверяем, какая именно кнопка была нажата
+        if msg_box.clickedButton() == yes_button:
+            try:
+                self.db.close_all()
+            except AttributeError:
+                pass
+            event.accept()
+        else:
+            event.ignore()
+
+
+
     
 
 if __name__ == "__main__":

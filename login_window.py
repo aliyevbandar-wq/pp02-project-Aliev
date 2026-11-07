@@ -77,8 +77,10 @@ class LoginWindow(QWidget):
         
     def check_login(self):
         login = self.login_input.text().strip()
+        
+        # ЗАДАНИЕ 1.1: Проверка на пустой логин
         if not login:
-            QMessageBox.warning(self, "Внимание", "Поле ввода логина не может быть пустым!")
+            QMessageBox.critical(self, "Ошибка", "Введите логин")
             return
             
         result = None
@@ -87,7 +89,6 @@ class LoginWindow(QWidget):
         if conn is not None:
             try:
                 cursor = conn.cursor()
-                # ШАГ 3: Изменили SQL-запрос, добавив раздельные поля last_name, first_name, middle_name вместо fio
                 query = "SELECT id_пользователя, id_роли, last_name, first_name, middle_name FROM users WHERE login = %s;"
                 cursor.execute(query, (login,))
                 result = cursor.fetchone()
@@ -98,32 +99,59 @@ class LoginWindow(QWidget):
             finally:
                 self.db.release_connection(conn)
         
-        # Заглушки также адаптированы под новую структуру (id, role_id, last_name, first_name, middle_name)
         if result is None:
             if login in ["client", "client_bear"]:
                 result = (3, 1, "Сидоров", "Сидор", "Сидорович")
             elif login in ["manager", "manager_doll"]:
-                # Пример для проверки Шага 5 (middle_name = None)
                 result = (2, 2, "Петров", "Петр", None) 
             elif login in ["admin_toy", "12345", "admin"]:
                 result = (1, 3, "Иванов", "Иван", "Иванович")
                 
+        # ЗАДАНИЕ 1.2: Проверка на неверный логин (пользователь не найден)
         if result is None:
-            QMessageBox.warning(self, "Ошибка", "Пользователь не найден!")
+            QMessageBox.critical(self, "Ошибка", "Пользователь не найден")
             return
             
         self.user_id = result[0]
         self.role_id = result[1]
         
-        # Распаковываем полученные части ФИО
         last_name = result[2]
         first_name = result[3]
         middle_name = result[4]
         
-        # ШАГ 4 и 5: Сохраняем ФИО, склеивая только существующие части (игнорируем None)
         self.full_name = " ".join(part for part in (last_name, first_name, middle_name) if part)
         
-        # ШАГ 6: Передаем full_name в MainWindow вместе с role_id
+        # ЗАДАНИЕ 3.1: Информационное окно приветствия успешного входа
+        info_box = QMessageBox(self)
+        info_box.setIcon(QMessageBox.Icon.Information)
+        info_box.setWindowTitle("Информация")
+        info_box.setText(f"Добро пожаловать, {self.full_name}!")
+        info_box.addButton("ОК", QMessageBox.ButtonRole.AcceptRole)
+        
+        info_box.setStyleSheet("""
+            QMessageBox {
+                background-color: #2C3E50;
+                font-family: 'Segoe UI', 'Calibri';
+            }
+            QLabel {
+                color: #FFFFFF;
+                font-size: 14px;
+            }
+            QPushButton {
+                background-color: #27AE60;
+                color: white;
+                border-radius: 6px;
+                padding: 6px 20px;
+                font-weight: bold;
+                font-size: 13px;
+                min-width: 60px;
+            }
+            QPushButton:hover {
+                background-color: #219653;
+            }
+        """)
+        info_box.exec()
+        
         if MainWindow is not None:
             self.main_window = MainWindow(role_id=self.role_id, full_name=self.full_name)
             self.main_window.show()
