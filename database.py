@@ -79,11 +79,27 @@ class Database:
 
         try:
             cursor = conn.cursor()
-            # Добавлено явное указание схемы public для устранения ошибки отсутствия отношения
-            query = "SELECT id_пользователя, login, id_роли FROM public.users WHERE login = %s;"
+            # Обновленный SQL-запрос под новые требования задания 5.1
+            query = """
+                SELECT user_id, login, role_id, last_name, first_name, middle_name 
+                FROM public.users 
+                WHERE login = %s;
+            """
             cursor.execute(query, (login_text,))
-            user = cursor.fetchone()
-            return user  # Вернет кортеж (id, login, role_id) или None
+            user_data = cursor.fetchone()
+            
+            if user_data:
+                # Распаковываем полученные данные
+                user_id, login, role_id, last_name, first_name, middle_name = user_data
+                
+                # Корректно склеиваем Фамилию, Имя и Отчество в одну строку
+                fio_parts = [last_name, first_name, middle_name]
+                full_name = " ".join([part for part in fio_parts if part])
+                
+                # Возвращаем кортеж с данными для авторизации (id, login, role_id, full_name)
+                return (user_id, login, role_id, full_name)
+                
+            return None
         except Exception as e:
             print(f"[БД | ОШИБКА] Не удалось проверить логин: {e}")
             return None
