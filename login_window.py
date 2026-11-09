@@ -169,3 +169,4 @@ if __name__ == "__main__":
     window = LoginWindow(db=db_instance)
     window.show()
     sys.exit(app.exec())
+    

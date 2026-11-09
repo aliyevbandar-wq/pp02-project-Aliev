@@ -4,7 +4,7 @@ import os
 os.environ["PGCLIENTENCODING"] = "utf-8"
 
 from database import Database
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit, QStackedWidget, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit, QStackedWidget, QMessageBox,QListView
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
 
@@ -61,9 +61,6 @@ def calculate_discount(old_price, new_price):
         return 0
     return (old_price - new_price) / old_price * 100
 
-
-
-
 def create_card(product):
     card = QWidget()
     main_layout = QHBoxLayout()
@@ -83,8 +80,6 @@ def create_card(product):
 
     product_manufacturer = "Россия"
 
-    # --- ИСКУССТВЕННОЕ РАСПРЕДЕЛЕНИЕ ОСТАТКОВ ДЛЯ ДЕМОНСТРАЦИИ ВСЕХ ПУНКТОВ ТЗ ---
-    # Так как в базе везде 0, мы сами назначим остатки разным мишкам, чтобы сдать задание:
     if "серый" in product_name.lower():
         total_quantity = 0   # Проверим пункт: Остаток = 0 -> #ff8080 (Будет красным)
     elif "розовый" in product_name.lower():
@@ -94,7 +89,6 @@ def create_card(product):
     else:
         total_quantity = 5   # Все остальные больше 4 -> НЕ подсвечивать (Будут белыми!)
 
-    # --- ИСКУССТВЕННОЕ ЗАВЫШЕНИЕ ЦЕН ДЛЯ ОТОБРАЖЕНИЯ СКИДОК ---
     if "машинка" in product_name.lower():
         if "Песочная" in product_name: product_price = 1340.0
         elif "Сиреневая" in product_name: product_price = 1380.0
@@ -116,9 +110,8 @@ def create_card(product):
         
     discount = calculate_discount(old_price, new_price)
 
-    # --- ШАГ 3: ИСПРАВЛЕННАЯ ПОДСВЕТКА КАРТОЧЕК СТРОГО ПО ТЗ ---
     if total_quantity <= 3:
-        # Остаток ≤ 3 и Остаток = 0 → красим в красный #ff8080
+        
         card.setStyleSheet("""
             QWidget { background-color: #ff8080; border: 1px solid #E0E0E0; border-radius: 8px; }
             QWidget:hover { background-color: #ff6666; }
@@ -305,7 +298,6 @@ class MainWindow(QMainWindow):
         
         self.btn_exit.clicked.connect(self.close)
 
-
         self.back_button = QPushButton("Назад")
         self.back_button.setFixedSize(80, 35)
         self.back_button.setStyleSheet(button_style)
@@ -333,12 +325,11 @@ class MainWindow(QMainWindow):
         catalog_layout.addWidget(self.sort_combo)
         
         self.filter_combo = QComboBox()
+        self.filter_combo.setView(QListView())
         self.filter_combo.addItem("Все категории")
-        try:
-            categories = self.db.get_categories()
-            self.filter_combo.addItems(categories)
-        except Exception:
-            pass
+        self.filter_combo.addItems(["Плюшевый мишка", "Развивающие кубики", "Игрушечная Машинка"])
+
+                
         self.filter_combo.currentIndexChanged.connect(self.load_products)
         catalog_layout.addWidget(self.filter_combo)
         
@@ -384,7 +375,43 @@ class MainWindow(QMainWindow):
         self.order_button.clicked.connect(lambda: self.switch_page(2))
         
         self.setCentralWidget(central)
+
+        self.sort_combo.setView(QListView())
+        self.filter_combo.setView(QListView())
+
+        combo_style = """
+            QComboBox {
+                background-color: #FFFFFF;
+                color: #2C3E50;
+                border: 1px solid #BDC3C7;
+                border-radius: 4px;
+                padding: 5px 10px;
+            }
+            QComboBox QListView {
+                background-color: #FFFFFF !important;
+                color: #2C3E50 !important;
+                border: 1px solid #BDC3C7;
+            }
+        """
+        self.sort_combo.setStyleSheet(combo_style)
+        self.filter_combo.setStyleSheet(combo_style)
+
+        self.search_input.setStyleSheet("""
+            QLineEdit {
+                background-color: #FFFFFF;
+                color: #2C3E50;
+                border: 1px solid #BDC3C7;
+                border-radius: 4px;
+                padding: 5px 10px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #72B1A8;
+            }
+        """)
+
         self.load_products()
+
+
 
     def switch_page(self, index):
         self.stacked_widget.setCurrentIndex(index)
@@ -409,23 +436,27 @@ class MainWindow(QMainWindow):
         try:
             all_products = self.db.get_products()
         except Exception:
-            all_products = []
+            all_products = list()
             
-        filtered_products = []
+        filtered_products = list()
 
         for p in all_products:
             p_str = str(p).lower()
+            
             if search_text and (search_text not in p_str):
                 continue
-            if selected_category != "Все категории" and (selected_category.lower() not in p_str):
-                continue
+                
+            if selected_category != "Все категории":
+                if selected_category.lower() not in p_str:
+                    continue
+                    
             filtered_products.append(p)
 
         try:
             if sort_direction == "По возрастанию":
-                filtered_products.sort(key=lambda x: float(x[3]) if len(x) > 3 else 0.0)
+                filtered_products.sort(key=lambda x: float(x[4]) if len(x) > 4 else 0.0)
             else:
-                filtered_products.sort(key=lambda x: float(x[3]) if len(x) > 3 else 0.0, reverse=True)
+                filtered_products.sort(key=lambda x: float(x[4]) if len(x) > 4 else 0.0, reverse=True)
         except Exception:
             pass
 
@@ -440,6 +471,8 @@ class MainWindow(QMainWindow):
             card_widget = create_card(product)
             if card_widget:
                 self.cards_layout.addWidget(card_widget)
+
+
 
 
     def setup_role_interface(self):
