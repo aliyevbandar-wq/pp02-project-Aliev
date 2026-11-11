@@ -4,7 +4,7 @@ import os
 os.environ["PGCLIENTENCODING"] = "utf-8"
 
 from database import Database
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit, QStackedWidget, QMessageBox,QListView
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QPushButton, QComboBox, QLineEdit, QStackedWidget, QMessageBox,QListView,QDialog
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
 
@@ -372,7 +372,6 @@ class MainWindow(QMainWindow):
         self.switch_page(0)
         layout.addWidget(self.stacked_widget)
         
-        self.btn_add_product.clicked.connect(lambda: self.switch_page(1))
         self.order_button.clicked.connect(lambda: self.switch_page(2))
         
         self.setCentralWidget(central)
@@ -412,73 +411,291 @@ class MainWindow(QMainWindow):
 
         self.load_products()
 
+
+
     def open_product_card(self, product):
-        from PyQt6.QtWidgets import QVBoxLayout
-        layout = self.product_card_page.layout()
-        if not layout:
-            layout = QVBoxLayout(self.product_card_page)
+        dialog = self.ProductCardDialog(product, self)
+        dialog.exec()
+
+    class ProductCardDialog(QDialog):
+        def __init__(self, product, parent=None):
+            super().__init__(parent)
+            self.product = product
+            self.setWindowTitle("Карточка товара")
+            self.resize(400, 600)
+            self.setStyleSheet("""
+                QDialog {
+                    background-color: #FFFFFF;
+                }
+                QLabel {
+                    color: #2C3E50 !important;
+                    background-color: transparent;
+                }
+                QWidget {
+                    color: #2C3E50 !important;
+                }
+            """)
+            self.setup_ui()
+
+        def setup_ui(self):
+            from PyQt6.QtWidgets import QVBoxLayout, QComboBox, QListView, QHBoxLayout, QMessageBox, QSpinBox, QFileDialog
+            layout = QVBoxLayout(self)
+            layout.setContentsMargins(20, 20, 20, 20)
+            layout.setSpacing(15)
+
+            p_id = next((int(v) for i, v in enumerate(self.product) if i == 0), 1)
+            self.p_id = p_id
+            p_name = next((str(v) for i, v in enumerate(self.product) if i == 1), "Без названия")
+            self.p_comp = next((str(v) for i, v in enumerate(self.product) if i == 3), "Не указан")
+            self.p_price = next((float(v) for i, v in enumerate(self.product) if i == 4), 1250.0)
+
+            self.name_label = QLabel(f"<h2>Товар ID {p_id}: {p_name}</h2>")
+            self.name_label.setStyleSheet("color: #2C3E50; background: transparent;")
+            self.name_label.setWordWrap(True)
+
+            self.image_label = QLabel()
+            self.image_label.setFixedSize(200, 200)
+            image_name = f"IMG_14_{str(p_id).zfill(3)}.png"
+            full_image_path = f"resources/{image_name}"
             
-        while layout.count():
-            item = layout.takeAt(0)
-            if item is not None:
-                current_widget = item.widget()
-                if current_widget is not None:
-                    current_widget.deleteLater()
+            if os.path.exists(full_image_path):
+                pixmap = QPixmap(full_image_path)
+            else:
+                stub_path = "picture.png" if os.path.exists("picture.png") else "resources/picture.png"
+                pixmap = QPixmap(stub_path)
+                
+            self.image_label.setPixmap(pixmap.scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            self.image_label.setStyleSheet("background: transparent;")
 
-        p_id = next((int(v) for i, v in enumerate(product) if i == 0), 1)
-        p_name = next((str(v) for i, v in enumerate(product) if i == 1), "Без названия")
-        p_comp = next((str(v) for i, v in enumerate(product) if i == 3), "Не указан")
-        p_price = next((float(v) for i, v in enumerate(product) if i == 4), 1250.0)
+            # --- ЗАДАНИЕ 1.1, Шаг 2 и 3: Создаём кнопку и подключаем к load_image ---
+            self.btn_load_image = QPushButton("Загрузить изображение")
+            self.btn_load_image.setFixedSize(200, 35)
+            self.btn_load_image.setStyleSheet("""
+                QPushButton { 
+                    background-color: #72B1A8; 
+                    color: white; 
+                    border-radius: 8px; 
+                    font-weight: bold; 
+                    border: none; 
+                }
+                QPushButton:hover { 
+                    background-color: #5E9E95; 
+                }
+            """)
+            self.btn_load_image.clicked.connect(self.load_image)
 
-        if "серый" in p_name.lower():
-            total_quantity = 0
-        elif "розовый" in p_name.lower():
-            total_quantity = 3
-        else:
-            total_quantity = 5
+            self.info_label = QLabel(f"""
+                <p style='font-size: 16px;'><b>Категория:</b> Детские товары / Игрушки</p>
+                <p style='font-size: 16px;'><b>Состав (из БД):</b> {self.p_comp}</p>
+                <p style='font-size: 16px;'><b>Остаток на складе:</b> 0 шт.</p>
+                <p style='font-size: 16px;'><b>Базовая цена:</b> {self.p_price:.2f} ₽</p>
+            """)
+            self.info_label.setStyleSheet("color: #2C3E50; background: transparent;")
 
-        title = QLabel(f"<h2>Игрушка: {p_name}</h2>")
-        title.setStyleSheet("color: #2C3E50; background: transparent;")
-        
-        img_label = QLabel()
-        img_label.setFixedSize(200, 200)
-        image_name = f"IMG_14_{str(p_id).zfill(3)}.png"
-        full_image_path = f"resources/{image_name}"
-        
-        if os.path.exists(full_image_path):
-            pixmap = QPixmap(full_image_path)
-        else:
-            stub_path = "picture.png" if os.path.exists("picture.png") else "resources/picture.png"
-            pixmap = QPixmap(stub_path)
+            self.variant_combo = QComboBox()
+            self.variant_combo.setView(QListView())
+            self.variant_combo.currentIndexChanged.connect(self.on_variant_changed)
             
-        img_label.setPixmap(pixmap.scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        img_label.setStyleSheet("background: transparent;")
+            self.variant_combo.setStyleSheet("""
+                QComboBox {
+                    background-color: #FFFFFF;
+                    color: #2C3E50;
+                    border: 1px solid #BDC3C7;
+                    border-radius: 4px;
+                    padding: 5px 10px;
+                }
+                QComboBox QListView {
+                    background-color: #FFFFFF !important;
+                    color: #2C3E50 !important;
+                    border: 1px solid #BDC3C7;
+                    selection-background-color: #72B1A8;
+                    selection-color: #FFFFFF;
+                }
+            """)
 
-        info = QLabel(f"""
-            <p style='font-size: 16px;'><b>Категория:</b> Детские товары / Игрушки</p>
-            <p style='font-size: 16px;'><b>Состав (из БД):</b> {p_comp}</p>
-            <p style='font-size: 16px;'><b>Остаток на складе:</b> {total_quantity} шт.</p>
-            <p style='font-size: 16px;'><b>Базовая цена:</b> {p_price:.2f} ₽</p>
-        """)
-        info.setStyleSheet("color: #000000; background: transparent;")
+            self.quantity_spinbox = QSpinBox()
+            self.quantity_spinbox.setMinimum(1)
+            self.quantity_spinbox.setStyleSheet("""
+                QSpinBox {
+                    background-color: #FFFFFF;
+                    color: #2C3E50;
+                    border: 1px solid #BDC3C7;
+                    border-radius: 4px;
+                    padding: 5px 10px;
+                    font-size: 14px;
+                }
+            """)
 
-        btn_back = QPushButton("← Вернуться в каталог")
-        btn_back.setFixedSize(180, 35)
-        btn_back.setStyleSheet("""
-            QPushButton { background-color: #72B1A8; color: white; border-radius: 8px; font-weight: bold; border: none; }
-            QPushButton:hover { background-color: #5E9E95; }
-        """)
-        btn_back.clicked.connect(lambda: self.switch_page(0))
+            btn_add = QPushButton("Добавить в корзину")
+            btn_add.setFixedSize(160, 35)
+            btn_add.setStyleSheet("""
+                QPushButton { 
+                    background-color: #72B1A8; 
+                    color: white; 
+                    border-radius: 8px; 
+                    font-weight: bold; 
+                    border: none; 
+                }
+                QPushButton:hover { 
+                    background-color: #5E9E95; 
+                }
+            """)
+            btn_add.clicked.connect(lambda: QMessageBox.information(self, "Информационное сообщение", "Корзина будет подключена в РТ 19"))
 
-        if isinstance(layout, QVBoxLayout):
-            layout.addWidget(btn_back)
-            layout.addWidget(title)
-            layout.addWidget(img_label)
-            layout.addWidget(info)
+            btn_close = QPushButton("Закрыть")
+            btn_close.setFixedSize(140, 35)
+            btn_close.setStyleSheet("""
+                QPushButton { 
+                    background-color: #72B1A8; 
+                    color: white; 
+                    border-radius: 8px; 
+                    font-weight: bold; 
+                    border: none; 
+                }
+                QPushButton:hover { 
+                    background-color: #5E9E95; 
+                }
+            """)
+            btn_close.clicked.connect(self.accept)
+
+            layout.addWidget(self.name_label)
+            layout.addWidget(self.image_label)
+            # --- ЗАДАНИЕ 1.1, Шаг 4: Добавляем кнопку в layout ---
+            layout.addWidget(self.btn_load_image)
+            layout.addWidget(self.info_label)
+            
+            variant_label = QLabel("<b>Выберите вариант:</b>")
+            variant_label.setStyleSheet("color: #2C3E50; background: transparent;")
+            layout.addWidget(variant_label)
+            layout.addWidget(self.variant_combo)
+
+            quantity_label = QLabel("<b>Количество:</b>")
+            quantity_label.setStyleSheet("color: #2C3E50; background: transparent;")
+            layout.addWidget(quantity_label)
+            layout.addWidget(self.quantity_spinbox)
+            
+            btn_layout = QHBoxLayout()
+            btn_layout.addWidget(btn_add)
+            btn_layout.addWidget(btn_close)
+            layout.addLayout(btn_layout)
+            
             layout.addStretch()
 
-        self.switch_page(1)
+            self.load_variants(p_id)
 
+        def load_image(self):
+            """Задание 2.1: Выбор файла, копирование в папку приложения, UPDATE в БД и обновление QLabel."""
+            import shutil
+            from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, "Выберите изображение", "", "Images (*.png *.jpg *.jpeg)"
+            )
+
+            if file_path:
+                try:
+                    os.makedirs("resources", exist_ok=True)
+                    ext = os.path.splitext(file_path)[1]
+                    product_id = getattr(self, "p_id", 1)
+                    new_filename = f"IMG_14_{str(product_id).zfill(3)}{ext}"
+                    dest_path = f"resources/{new_filename}"
+
+                    if os.path.abspath(file_path) != os.path.abspath(dest_path):
+                        shutil.copy2(file_path, dest_path)
+
+                    db = getattr(self.parent(), "db", None) or Database()
+                    conn = db.get_connection()
+                    if conn is not None:
+                        try:
+                            cursor = conn.cursor()
+                            cursor.execute(
+                                "UPDATE products SET image_path = %s WHERE product_id = %s;",
+                                (dest_path, product_id)
+                            )
+                            conn.commit()
+                        finally:
+                            if "cursor" in locals():
+                                cursor.close()
+                            db.release_connection(conn)
+
+                    IMAGE_CACHE.pop(dest_path, None)
+                    pixmap = QPixmap(dest_path)
+                    self.image_label.setPixmap(
+                        pixmap.scaled(
+                            200, 200,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation
+                        )
+                    )
+
+                except Exception as e:
+                    print(f"Ошибка при загрузке изображения: {e}")
+                    QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить изображение:\n{e}")
+
+
+        def load_variants(self, product_id):
+            """Загружает варианты из БД, а при их отсутствии подставляет базовый список вариантов."""
+            db = getattr(self.parent(), "db", None) or Database()
+            conn = db.get_connection()
+            rows = []
+
+            if conn is not None:
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT variant_id, quantity
+                        FROM stock_items
+                        WHERE product_id = %s
+                        ORDER BY variant_id;
+                    """, (product_id,))
+                    rows = cursor.fetchall()
+                except Exception as e:
+                    print(f"Примечание при загрузке вариантов из БД: {e}")
+                finally:
+                    if "cursor" in locals():
+                        cursor.close()
+                    db.release_connection(conn)
+
+            self.variant_combo.blockSignals(True)
+            self.variant_combo.clear()
+
+            if rows:
+                for variant_id, quantity in rows:
+                    self.variant_combo.addItem(f"Вариант {variant_id}", (variant_id, quantity))
+            else:
+                # Резервный список вариантов, если в таблице stock_items нет записей для товара
+                name_lower = str(self.product).lower() if len(self.product) > 1 else ""
+                if "кубики" in name_lower:
+                    fallback = ["Макси", "Пастель", "Логика", "Набор", "Алфавит", "Сортер", "Цифры", "Геометрия"]
+                elif "машин" in name_lower:
+                    fallback = ["Серая", "Салатовая", "Зеленая", "Розовая", "Бежевая", "Голубая", "Сиреневая", "Песочная"]
+                else:
+                    fallback = ["Серый", "Коричневый", "Оливковый", "Карамельный", "Бирюзовый", "Розовый", "Мятный", "Синий"]
+
+                default_qty = 0 if "серый" in name_lower else (3 if "розовый" in name_lower else 5)
+                for idx, title in enumerate(fallback, start=1):
+                    self.variant_combo.addItem(title, (idx, default_qty))
+
+            self.variant_combo.blockSignals(False)
+            self.on_variant_changed()
+
+
+        def on_variant_changed(self):
+            data = self.variant_combo.currentData()
+            if data is not None:
+                variant_id, available = data
+                self.info_label.setText(f"""
+                    <p style='font-size: 16px;'><b>Категория:</b> Детские товары / Игрушки</p>
+                    <p style='font-size: 16px;'><b>Состав (из БД):</b> {self.p_comp}</p>
+                    <p style='font-size: 16px;'><b>Остаток на складе:</b> {available} шт.</p>
+                    <p style='font-size: 16px;'><b>Базовая цена:</b> {self.p_price:.2f} ₽</p>
+                """)
+                if available > 0:
+                    self.quantity_spinbox.setEnabled(True)
+                    self.quantity_spinbox.setMaximum(available)
+                else:
+                    self.quantity_spinbox.setMaximum(1)
+                    self.quantity_spinbox.setEnabled(False)
 
 
     
@@ -566,9 +783,6 @@ class MainWindow(QMainWindow):
                 self.cards_layout.addWidget(card_widget)
 
 
-
-
-
     def setup_role_interface(self):
         if self.role_id == 3:
             self.role_label.setText("Роль: Администратор")
@@ -600,9 +814,9 @@ class MainWindow(QMainWindow):
 
     def logout_user(self):
         from login_window import LoginWindow
-        # Создаем новый чистый объект базы данных с открытым пулом соединений
+
         new_db_instance = Database()
-        # Передаем новую базу данных в открывающееся окно авторизации
+
         self.new_auth = LoginWindow(db=new_db_instance)
         self.new_auth.show()
         self.close()
@@ -614,7 +828,7 @@ class MainWindow(QMainWindow):
         msg_box.setWindowTitle("Выход")
         msg_box.setText("Вы уверены, что хотите выйти?")
         
-        # Создаем кастомные кнопки на русском языке
+       
         yes_button = msg_box.addButton("Да", QMessageBox.ButtonRole.YesRole)
         no_button = msg_box.addButton("Нет", QMessageBox.ButtonRole.NoRole)
         msg_box.setDefaultButton(no_button)
@@ -647,7 +861,6 @@ class MainWindow(QMainWindow):
         
         msg_box.exec()
         
-        # Проверяем, какая именно кнопка была нажата
         if msg_box.clickedButton() == yes_button:
             try:
                 self.db.close_all()
